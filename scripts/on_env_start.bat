@@ -1,11 +1,25 @@
 @echo off
 
-@echo. & echo "Easy Diffusion - v2" & echo.
+@echo. & echo "Easy Diffusion - v3" & echo.
 
 set PATH=C:\Windows\System32;%PATH%
 
 if exist "scripts\config.bat" (
     @call scripts\config.bat
+)
+
+if exist "scripts\user_config.bat" (
+    @call scripts\user_config.bat
+)
+
+if exist "stable-diffusion\env" (
+    @set PYTHONPATH=%PYTHONPATH%;%cd%\stable-diffusion\env\lib\site-packages
+)
+
+if exist "scripts\get_config.py" (
+    @FOR /F "tokens=* USEBACKQ" %%F IN (`python scripts\get_config.py --default=main update_branch`) DO (
+        @SET update_branch=%%F
+    )
 )
 
 if "%update_branch%"=="" (
@@ -32,6 +46,8 @@ if "%update_branch%"=="" (
 
     @cd sd-ui-files
 
+    @call git add -A .
+    @call git stash
     @call git reset --hard
     @call git -c advice.detachedHead=false checkout "%update_branch%"
     @call git pull
@@ -41,10 +57,10 @@ if "%update_branch%"=="" (
     @echo. & echo "Downloading Easy Diffusion..." & echo.
     @echo "Using the %update_branch% channel" & echo.
 
-    @call git clone -b "%update_branch%" https://github.com/cmdr2/stable-diffusion-ui.git sd-ui-files && (
+    @call git clone -b "%update_branch%" https://github.com/easydiffusion/easydiffusion.git sd-ui-files && (
         @echo sd_ui_git_cloned >> scripts\install_status.txt
     ) || (
-        @echo "Error downloading Easy Diffusion. Sorry about that, please try to:" & echo "  1. Run this installer again." & echo "  2. If that doesn't fix it, please try the common troubleshooting steps at https://github.com/cmdr2/stable-diffusion-ui/wiki/Troubleshooting" & echo "  3. If those steps don't help, please copy *all* the error messages in this window, and ask the community at https://discord.com/invite/u9yhsFmEkB" & echo "  4. If that doesn't solve the problem, please file an issue at https://github.com/cmdr2/stable-diffusion-ui/issues" & echo "Thanks!"
+        @echo "Error downloading Easy Diffusion. Sorry about that, please try to:" & echo "  1. Run this installer again." & echo "  2. If that doesn't fix it, please try the common troubleshooting steps at https://github.com/easydiffusion/easydiffusion/wiki/Troubleshooting" & echo "  3. If those steps don't help, please copy *all* the error messages in this window, and ask the community at https://discord.com/invite/u9yhsFmEkB" & echo "  4. If that doesn't solve the problem, please file an issue at https://github.com/easydiffusion/easydiffusion/issues" & echo "Thanks!"
         pause
         @exit /b
     )
@@ -53,6 +69,8 @@ if "%update_branch%"=="" (
 @xcopy sd-ui-files\ui ui /s /i /Y /q
 @copy sd-ui-files\scripts\on_sd_start.bat scripts\ /Y
 @copy sd-ui-files\scripts\check_modules.py scripts\ /Y
+@copy sd-ui-files\scripts\get_config.py scripts\ /Y
+@copy sd-ui-files\scripts\config.yaml.sample scripts\ /Y
 @copy "sd-ui-files\scripts\Start Stable Diffusion UI.cmd" . /Y
 @copy "sd-ui-files\scripts\Developer Console.cmd" . /Y
 

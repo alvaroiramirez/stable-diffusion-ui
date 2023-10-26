@@ -69,13 +69,16 @@
 }
 
 .parameters-table > div:first-child {
-    border-radius: 12px 12px 0px 0px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
 }
 
 .parameters-table > div:last-child {
-    border-radius: 0px 0px 12px 12px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
 }
 
-.parameters-table .fa-fire {
+.parameters-table .fa-fire,
+.parameters-table .fa-bolt {
     color: #F7630C;
 }

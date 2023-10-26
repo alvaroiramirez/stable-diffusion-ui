@@ -1,16 +1,22 @@
+import json
+import logging
 import os
+import shutil
 import socket
 import sys
-import json
 import traceback
-import logging
-import shlex
-from rich.logging import RichHandler
+import copy
+from ruamel.yaml import YAML
 
-from sdkit.utils import log as sdkit_log  # hack, so we can overwrite the log config
+import urllib
+import warnings
 
 from easydiffusion import task_manager
 from easydiffusion.utils import log
+from rich.logging import RichHandler
+from rich.console import Console
+from rich.panel import Panel
+from sdkit.utils import log as sdkit_log  # hack, so we can overwrite the log config
 
 # Remove all handlers associated with the root logger object.
 for handler in logging.root.handlers[:]:
@@ -26,10 +32,12 @@ logging.basicConfig(
 
 SD_DIR = os.getcwd()
 
+ROOT_DIR = os.path.abspath(os.path.join(SD_DIR, ".."))
+
 SD_UI_DIR = os.getenv("SD_UI_PATH", None)
 
 CONFIG_DIR = os.path.abspath(os.path.join(SD_UI_DIR, "..", "scripts"))
-MODELS_DIR = os.path.abspath(os.path.join(SD_DIR, "..", "models"))
+BUCKET_DIR = os.path.abspath(os.path.join(SD_DIR, "..", "bucket"))
 
 USER_PLUGINS_DIR = os.path.abspath(os.path.join(SD_DIR, "..", "plugins"))
 CORE_PLUGINS_DIR = os.path.abspath(os.path.join(SD_UI_DIR, "plugins"))
@@ -52,93 +60,164 @@ APP_CONFIG_DEFAULTS = {
     "ui": {
         "open_browser_on_start": True,
     },
+    "use_v3_engine": True,
 }
+
+IMAGE_EXTENSIONS = [
+    ".png",
+    ".apng",
+    ".jpg",
+    ".jpeg",
+    ".jfif",
+    ".pjpeg",
+    ".pjp",
+    ".jxl",
+    ".gif",
+    ".webp",
+    ".avif",
+    ".svg",
+]
+CUSTOM_MODIFIERS_DIR = os.path.abspath(os.path.join(SD_DIR, "..", "modifiers"))
+CUSTOM_MODIFIERS_PORTRAIT_EXTENSIONS = [
+    ".portrait",
+    "_portrait",
+    " portrait",
+    "-portrait",
+]
+CUSTOM_MODIFIERS_LANDSCAPE_EXTENSIONS = [
+    ".landscape",
+    "_landscape",
+    " landscape",
+    "-landscape",
+]
+
+MODELS_DIR = os.path.abspath(os.path.join(SD_DIR, "..", "models"))
 
 
 def init():
+    global MODELS_DIR
+
     os.makedirs(USER_UI_PLUGINS_DIR, exist_ok=True)
     os.makedirs(USER_SERVER_PLUGINS_DIR, exist_ok=True)
 
+    # https://pytorch.org/docs/stable/storage.html
+    warnings.filterwarnings("ignore", category=UserWarning, message="TypedStorage is deprecated")
+
+    config = getConfig()
+    config_models_dir = config.get("models_dir", None)
+    if (config_models_dir is not None and config_models_dir != ""):
+        MODELS_DIR = config_models_dir
+
+
+def init_render_threads():
     load_server_plugins()
 
     update_render_threads()
 
 
 def getConfig(default_val=APP_CONFIG_DEFAULTS):
-    try:
-        config_json_path = os.path.join(CONFIG_DIR, "config.json")
-        if not os.path.exists(config_json_path):
-            config = default_val
-        else:
+    config_yaml_path = os.path.join(CONFIG_DIR, "..", "config.yaml")
+
+    # migrate the old config yaml location
+    config_legacy_yaml = os.path.join(CONFIG_DIR, "config.yaml")
+    if os.path.isfile(config_legacy_yaml):
+        shutil.move(config_legacy_yaml, config_yaml_path)
+
+    def set_config_on_startup(config: dict):
+        if getConfig.__use_v3_engine_on_startup is None:
+            getConfig.__use_v3_engine_on_startup = config.get("use_v3_engine", True)
+        config["config_on_startup"] = {"use_v3_engine": getConfig.__use_v3_engine_on_startup}
+
+    if os.path.isfile(config_yaml_path):
+        try:
+            yaml = YAML()
+            with open(config_yaml_path, "r", encoding="utf-8") as f:
+                config = yaml.load(f)
+            if "net" not in config:
+                config["net"] = {}
+                if os.getenv("SD_UI_BIND_PORT") is not None:
+                    config["net"]["listen_port"] = int(os.getenv("SD_UI_BIND_PORT"))
+                else:
+                    config["net"]["listen_port"] = 9000
+                if os.getenv("SD_UI_BIND_IP") is not None:
+                    config["net"]["listen_to_network"] = os.getenv("SD_UI_BIND_IP") == "0.0.0.0"
+                else:
+                    config["net"]["listen_to_network"] = True
+
+            set_config_on_startup(config)
+
+            return config
+        except Exception as e:
+            log.warn(traceback.format_exc())
+            set_config_on_startup(default_val)
+            return default_val
+    else:
+        try:
+            config_json_path = os.path.join(CONFIG_DIR, "config.json")
+            if not os.path.exists(config_json_path):
+                return default_val
+
+            log.info("Converting old json config file to yaml")
             with open(config_json_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
-        if "net" not in config:
-            config["net"] = {}
-        if os.getenv("SD_UI_BIND_PORT") is not None:
-            config["net"]["listen_port"] = int(os.getenv("SD_UI_BIND_PORT"))
-        else:
-            config["net"]["listen_port"] = 9000
-        if os.getenv("SD_UI_BIND_IP") is not None:
-            config["net"]["listen_to_network"] = os.getenv("SD_UI_BIND_IP") == "0.0.0.0"
-        else:
-            config["net"]["listen_to_network"] = True
-        return config
-    except Exception as e:
-        log.warn(traceback.format_exc())
-        return default_val
+            # Save config in new format
+            setConfig(config)
+
+            with open(config_json_path + ".txt", "w") as f:
+                f.write("Moved to config.yaml inside the Easy Diffusion folder. You can open it in any text editor.")
+            os.remove(config_json_path)
+
+            return getConfig(default_val)
+        except Exception as e:
+            log.warn(traceback.format_exc())
+            set_config_on_startup(default_val)
+            return default_val
+
+
+getConfig.__use_v3_engine_on_startup = None
 
 
 def setConfig(config):
-    try:  # config.json
-        config_json_path = os.path.join(CONFIG_DIR, "config.json")
-        with open(config_json_path, "w", encoding="utf-8") as f:
-            json.dump(config, f)
+    global MODELS_DIR
+
+    try:  # config.yaml
+        config_yaml_path = os.path.join(CONFIG_DIR, "..", "config.yaml")
+        config_yaml_path = os.path.abspath(config_yaml_path)
+        yaml = YAML()
+
+        if not hasattr(config, "_yaml_comment"):
+            config_yaml_sample_path = os.path.join(CONFIG_DIR, "config.yaml.sample")
+
+            if os.path.exists(config_yaml_sample_path):
+                with open(config_yaml_sample_path, "r", encoding="utf-8") as f:
+                    commented_config = yaml.load(f)
+
+                for k in config:
+                    commented_config[k] = config[k]
+
+                config = commented_config
+        yaml.indent(mapping=2, sequence=4, offset=2)
+
+        if "config_on_startup" in config:
+            del config["config_on_startup"]
+
+        try:
+            f = open(config_yaml_path + ".tmp", "w", encoding="utf-8")
+            yaml.dump(config, f)
+        finally:
+            f.close()  # do this explicitly to avoid NUL bytes (possible rare bug when using 'with')
+
+        # verify that the new file is valid, and only then overwrite the old config file
+        # helps prevent the rare NUL bytes error from corrupting the config file
+        yaml = YAML()
+        with open(config_yaml_path + ".tmp", "r", encoding="utf-8") as f:
+            yaml.load(f)
+        shutil.move(config_yaml_path + ".tmp", config_yaml_path)
     except:
         log.error(traceback.format_exc())
 
-    try:  # config.bat
-        config_bat_path = os.path.join(CONFIG_DIR, "config.bat")
-        config_bat = []
-
-        if "update_branch" in config:
-            config_bat.append(f"@set update_branch={config['update_branch']}")
-
-        config_bat.append(f"@set SD_UI_BIND_PORT={config['net']['listen_port']}")
-        bind_ip = "0.0.0.0" if config["net"]["listen_to_network"] else "127.0.0.1"
-        config_bat.append(f"@set SD_UI_BIND_IP={bind_ip}")
-
-        # Preserve these variables if they are set
-        for var in PRESERVE_CONFIG_VARS:
-            if os.getenv(var) is not None:
-                config_bat.append(f"@set {var}={os.getenv(var)}")
-
-        if len(config_bat) > 0:
-            with open(config_bat_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(config_bat))
-    except:
-        log.error(traceback.format_exc())
-
-    try:  # config.sh
-        config_sh_path = os.path.join(CONFIG_DIR, "config.sh")
-        config_sh = ["#!/bin/bash"]
-
-        if "update_branch" in config:
-            config_sh.append(f"export update_branch={config['update_branch']}")
-
-        config_sh.append(f"export SD_UI_BIND_PORT={config['net']['listen_port']}")
-        bind_ip = "0.0.0.0" if config["net"]["listen_to_network"] else "127.0.0.1"
-        config_sh.append(f"export SD_UI_BIND_IP={bind_ip}")
-
-        # Preserve these variables if they are set
-        for var in PRESERVE_CONFIG_VARS:
-            if os.getenv(var) is not None:
-                config_bat.append(f'export {var}="{shlex.quote(os.getenv(var))}"')
-
-        if len(config_sh) > 1:
-            with open(config_sh_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(config_sh))
-    except:
-        log.error(traceback.format_exc())
+    if config.get("models_dir"):
+        MODELS_DIR = config["models_dir"]
 
 
 def save_to_config(ckpt_model_name, vae_model_name, hypernetwork_model_name, vram_usage_level):
@@ -172,10 +251,12 @@ def update_render_threads():
 def getUIPlugins():
     plugins = []
 
+    file_names = set()
     for plugins_dir, dir_prefix in UI_PLUGINS_SOURCES:
         for file in os.listdir(plugins_dir):
-            if file.endswith(".plugin.js"):
+            if file.endswith(".plugin.js") and file not in file_names:
                 plugins.append(f"/plugins/{dir_prefix}/{file}")
+                file_names.add(file)
 
     return plugins
 
@@ -228,9 +309,151 @@ def getIPConfig():
 def open_browser():
     config = getConfig()
     ui = config.get("ui", {})
-    net = config.get("net", {"listen_port": 9000})
+    net = config.get("net", {})
     port = net.get("listen_port", 9000)
+
     if ui.get("open_browser_on_start", True):
         import webbrowser
 
+        log.info("Opening browser..")
+
         webbrowser.open(f"http://localhost:{port}")
+
+    Console().print(
+        Panel(
+            "\n"
+            + "[white]Easy Diffusion is ready to serve requests.\n\n"
+            + "A new browser tab should have been opened by now.\n"
+            + f"If not, please open your web browser and navigate to [bold yellow underline]http://localhost:{port}/\n",
+            title="Easy Diffusion is ready",
+            style="bold yellow on blue",
+        )
+    )
+
+
+def fail_and_die(fail_type: str, data: str):
+    suggestions = [
+        "Run this installer again.",
+        "If those steps don't help, please copy *all* the error messages in this window, and ask the community at https://discord.com/invite/u9yhsFmEkB",
+        "If that doesn't solve the problem, please file an issue at https://github.com/easydiffusion/easydiffusion/issues",
+    ]
+
+    if fail_type == "model_download":
+        fail_label = f"Error downloading the {data} model"
+        suggestions.insert(
+            1,
+            "If that doesn't fix it, please try to download the file manually. The address to download from, and the destination to save to are printed above this message.",
+        )
+    else:
+        fail_label = "Error while installing Easy Diffusion"
+
+    msg = [f"{fail_label}. Sorry about that, please try to:"]
+    for i, suggestion in enumerate(suggestions):
+        msg.append(f"{i+1}. {suggestion}")
+    msg.append("Thanks!")
+
+    print("\n".join(msg))
+    exit(1)
+
+
+def get_image_modifiers():
+    modifiers_json_path = os.path.join(SD_UI_DIR, "modifiers.json")
+
+    modifier_categories = {}
+    original_category_order = []
+    with open(modifiers_json_path, "r", encoding="utf-8") as f:
+        modifiers_file = json.load(f)
+
+        # The trailing slash is needed to support symlinks
+        if not os.path.isdir(f"{CUSTOM_MODIFIERS_DIR}/"):
+            return modifiers_file
+
+        # convert modifiers from a list of objects to a dict of dicts
+        for category_item in modifiers_file:
+            category_name = category_item["category"]
+            original_category_order.append(category_name)
+            category = {}
+            for modifier_item in category_item["modifiers"]:
+                modifier = {}
+                for preview_item in modifier_item["previews"]:
+                    modifier[preview_item["name"]] = preview_item["path"]
+                category[modifier_item["modifier"]] = modifier
+            modifier_categories[category_name] = category
+
+    def scan_directory(directory_path: str, category_name="Modifiers"):
+        for entry in os.scandir(directory_path):
+            if entry.is_file():
+                file_extension = list(filter(lambda e: entry.name.endswith(e), IMAGE_EXTENSIONS))
+                if len(file_extension) == 0:
+                    continue
+
+                modifier_name = entry.name[: -len(file_extension[0])]
+                modifier_path = f"custom/{entry.path[len(CUSTOM_MODIFIERS_DIR) + 1:]}"
+                # URL encode path segments
+                modifier_path = "/".join(
+                    map(
+                        lambda segment: urllib.parse.quote(segment),
+                        modifier_path.split("/"),
+                    )
+                )
+                is_portrait = True
+                is_landscape = True
+
+                portrait_extension = list(
+                    filter(
+                        lambda e: modifier_name.lower().endswith(e),
+                        CUSTOM_MODIFIERS_PORTRAIT_EXTENSIONS,
+                    )
+                )
+                landscape_extension = list(
+                    filter(
+                        lambda e: modifier_name.lower().endswith(e),
+                        CUSTOM_MODIFIERS_LANDSCAPE_EXTENSIONS,
+                    )
+                )
+
+                if len(portrait_extension) > 0:
+                    is_landscape = False
+                    modifier_name = modifier_name[: -len(portrait_extension[0])]
+                elif len(landscape_extension) > 0:
+                    is_portrait = False
+                    modifier_name = modifier_name[: -len(landscape_extension[0])]
+
+                if category_name not in modifier_categories:
+                    modifier_categories[category_name] = {}
+
+                category = modifier_categories[category_name]
+
+                if modifier_name not in category:
+                    category[modifier_name] = {}
+
+                if is_portrait or "portrait" not in category[modifier_name]:
+                    category[modifier_name]["portrait"] = modifier_path
+
+                if is_landscape or "landscape" not in category[modifier_name]:
+                    category[modifier_name]["landscape"] = modifier_path
+            elif entry.is_dir():
+                scan_directory(
+                    entry.path,
+                    entry.name if directory_path == CUSTOM_MODIFIERS_DIR else f"{category_name}/{entry.name}",
+                )
+
+    scan_directory(CUSTOM_MODIFIERS_DIR)
+
+    custom_categories = sorted(
+        [cn for cn in modifier_categories.keys() if cn not in original_category_order],
+        key=str.casefold,
+    )
+
+    # convert the modifiers back into a list of objects
+    modifier_categories_list = []
+    for category_name in [*original_category_order, *custom_categories]:
+        category = {"category": category_name, "modifiers": []}
+        for modifier_name in sorted(modifier_categories[category_name].keys(), key=str.casefold):
+            modifier = {"modifier": modifier_name, "previews": []}
+            for preview_name, preview_path in modifier_categories[category_name][modifier_name].items():
+                modifier["previews"].append({"name": preview_name, "path": preview_path})
+            category["modifiers"].append(modifier)
+        modifier_categories_list.append(category)
+
+    return modifier_categories_list

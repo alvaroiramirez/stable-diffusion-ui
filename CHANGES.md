@@ -1,24 +1,146 @@
 # What's new?
 
+## v3.0
+### Major Changes
+- **ControlNet** - Full support for ControlNet, with native integration of the common ControlNet models. Just select a control image, then choose the ControlNet filter/model and run. No additional configuration or download necessary. Supports custom ControlNets as well.
+- **SDXL** - Full support for SDXL. No configuration necessary, just put the SDXL model in the `models/stable-diffusion` folder.
+- **Multiple LoRAs** - Use multiple LoRAs, including SDXL and SD2-compatible LoRAs. Put them in the `models/lora` folder.
+- **Embeddings** - Use textual inversion embeddings easily, by putting them in the `models/embeddings` folder and using their names in the prompt (or by clicking the `+ Embeddings` button to select embeddings visually). Thanks @JeLuf.
+- **Seamless Tiling** - Generate repeating textures that can be useful for games and other art projects. Works best in 512x512 resolution. Thanks @JeLuf.
+- **Inpainting Models** - Full support for inpainting models, including custom inpainting models. No configuration (or yaml files) necessary.
+- **Faster than v2.5** - Nearly 40% faster than Easy Diffusion v2.5, and can be even faster if you enable xFormers.
+- **Even less VRAM usage** - Less than 2 GB for 512x512 images on 'low' VRAM usage setting (SD 1.5). Can generate large images with SDXL.
+- **WebP images** - Supports saving images in the lossless webp format.
+- **Undo/Redo in the UI** - Remove tasks or images from the queue easily, and undo the action if you removed anything accidentally. Thanks @JeLuf.
+- **Three new samplers, and latent upscaler** - Added `DEIS`, `DDPM` and `DPM++ 2m SDE` as additional samplers. Thanks @ogmaresca and @rbertus2000.
+- **Significantly faster 'Upscale' and 'Fix Faces' buttons on the images**
+- **Major rewrite of the code** - We've switched to using diffusers under-the-hood, which allows us to release new features faster, and focus on making the UI and installer even easier to use.
+
+### Detailed changelog
+* 3.0.6 - 18 Sep 2023 - Add thumbnails to embeddings from the UI, using the new `Upload Thumbnail` button in the Embeddings popup. Thanks @JeLuf.
+* 3.0.6 - 15 Sep 2023 - Fix broken embeddings dialog when LoRA information couldn't be fetched.
+* 3.0.6 - 14 Sep 2023 - UI for adding notes to LoRA files (to help you remember which prompts to use). Also added a button to automatically fetch prompts from Civitai for a LoRA file, using the `Import from Civitai` button. Thanks @JeLuf.
+* 3.0.5 - 2 Sep 2023 - Support SDXL ControlNets.
+* 3.0.4 - 1 Sep 2023 - Fix incorrect metadata generated for embeddings, when the exact word doesn't match the case, or is part of a larger word.
+* 3.0.4 - 1 Sep 2023 - Simplify the installation for AMD users on Linux. Thanks @JeLuf.
+* 3.0.4 - 1 Sep 2023 - Allow using a different folder for models. This is useful if you want to share a models folder across different software, or on a different drive. You can change this path in the Settings tab.
+* 3.0.3 - 31 Aug 2023 - Auto-save images to disk (if enabled by the user) when upscaling/fixing using the buttons on the image.
+* 3.0.3 - 30 Aug 2023 - Allow loading NovelAI-based custom models.
+* 3.0.3 - 30 Aug 2023 - Fix broken VAE tiling. This allows you to create larger images with lesser VRAM usage.
+* 3.0.3 - 30 Aug 2023 - Allow blocking NSFW images using a server-side config. This prevents the browser from generating NSFW images or changing the config. Open `config.yaml` in a text editor (e.g. Notepad), and add `block_nsfw: true` at the end, and save the file.
+* 3.0.2 - 29 Aug 2023 - Fixed incorrect matching of embeddings from prompts.
+* 3.0.2 - 24 Aug 2023 - Fix broken seamless tiling.
+* 3.0.2 - 23 Aug 2023 - Fix styling on mobile devices.
+* 3.0.2 - 22 Aug 2023 - Full support for inpainting models, including custom models. Support SD 1.x and SD 2.x inpainting models. Does not require you to specify a yaml config file.
+* 3.0.2 - 22 Aug 2023 - Reduce VRAM consumption of controlnet in 'low' VRAM mode, and allow accelerating controlnets using xformers.
+* 3.0.2 - 22 Aug 2023 - Improve auto-detection of SD 2.0 and 2.1 models, removing the need for custom yaml files for SD 2.x models. Improve the model load time by speeding-up the black image test.
+* 3.0.1 - 18 Aug 2023 - Rotate an image if EXIF rotation is present. For e.g. this is common in images taken with a smartphone.
+* 3.0.1 - 18 Aug 2023 - Resize control images to the task dimensions, to avoid memory errors with high-res control images.
+* 3.0.1 - 18 Aug 2023 - Show controlnet filter preview in the task entry.
+* 3.0.1 - 18 Aug 2023 - Fix drag-and-drop and 'Use these Settings' for LoRA and ControlNet.
+* 3.0.1 - 18 Aug 2023 - Auto-save LoRA models and strengths.
+* 3.0.1 - 17 Aug 2023 - Automatically use the correct yaml config file for custom SDXL models, even if a yaml file isn't present in the folder.
+* 3.0.1 - 17 Aug 2023 - Fix broken embeddings with SDXL.
+* 3.0.1 - 16 Aug 2023 - Fix broken LoRA with SDXL.
+* 3.0.1 - 15 Aug 2023 - Fix broken seamless tiling.
+* 3.0.1 - 15 Aug 2023 - Fix textual inversion embeddings not working in `low` VRAM usage mode.
+* 3.0.1 - 15 Aug 2023 - Fix for custom VAEs not working in `low` VRAM usage mode.
+* 3.0.1 - 14 Aug 2023 - Slider to change the image dimensions proportionally (in Image Settings). Thanks @JeLuf.
+* 3.0.1 - 14 Aug 2023 - Show an error to the user if an embedding isn't compatible with the model, instead of failing silently without informing the user. Thanks @JeLuf.
+* 3.0.1 - 14 Aug 2023 - Disable watermarking for SDXL img2img. Thanks @AvidGameFan.
+* 3.0.0 - 3 Aug 2023 - Enabled diffusers for everyone by default. The old v2 engine can be used by disabling the "Use v3 engine" option in the Settings tab.
+
 ## v2.5
 ### Major Changes
-- **Nearly twice as fast** - significantly faster speed of image generation. We're now pretty close to automatic1111's speed. Code contributions are welcome to make our project even faster: https://github.com/easydiffusion/sdkit/#is-it-fast
+- **Nearly twice as fast** - significantly faster speed of image generation. Code contributions are welcome to make our project even faster: https://github.com/easydiffusion/sdkit/#is-it-fast
+- **Mac M1/M2 support** - Experimental support for Mac M1/M2. Thanks @michaelgallacher, @JeLuf and vishae.
+- **AMD support for Linux** - Experimental support for AMD GPUs on Linux. Thanks @DianaNites and @JeLuf.
 - **Full support for Stable Diffusion 2.1 (including CPU)** - supports loading v1.4 or v2.0 or v2.1 models seamlessly. No need to enable "Test SD2", and no need to add `sd2_` to your SD 2.0 model file names. Works on CPU as well.
 - **Memory optimized Stable Diffusion 2.1** - you can now use Stable Diffusion 2.1 models, with the same low VRAM optimizations that we've always had for SD 1.4. Please note, the SD 2.0 and 2.1 models require more GPU and System RAM, as compared to the SD 1.4 and 1.5 models.
-- **11 new samplers!** - explore the new samplers, some of which can generate great images in less than 10 inference steps! We've added the Karras and UniPC samplers.
-- **Model Merging** - You can now merge two models (`.ckpt` or `.safetensors`) and output `.ckpt` or `.safetensors` models, optionally in `fp16` precision. Details: https://github.com/cmdr2/stable-diffusion-ui/wiki/Model-Merging
+- **11 new samplers!** - explore the new samplers, some of which can generate great images in less than 10 inference steps! We've added the Karras and UniPC samplers. Thanks @Schorny for the UniPC samplers.
+- **Model Merging** - You can now merge two models (`.ckpt` or `.safetensors`) and output `.ckpt` or `.safetensors` models, optionally in `fp16` precision. Details: https://github.com/easydiffusion/easydiffusion/wiki/Model-Merging . Thanks @JeLuf.
 - **Fast loading/unloading of VAEs** - No longer needs to reload the entire Stable Diffusion model, each time you change the VAE
 - **Database of known models** - automatically picks the right configuration for known models. E.g. we automatically detect and apply "v" parameterization (required for some SD 2.0 models), and "fp32" attention precision (required for some SD 2.1 models).
 - **Color correction for img2img** - an option to preserve the color profile (histogram) of the initial image. This is especially useful if you're getting red-tinted images after inpainting/masking.
 - **Three GPU Memory Usage Settings** - `High` (fastest, maximum VRAM usage), `Balanced` (default - almost as fast, significantly lower VRAM usage), `Low` (slowest, very low VRAM usage). The `Low` setting is applied automatically for GPUs with less than 4 GB of VRAM.
-- **Find models in sub-folders** - This allows you to organize your models into sub-folders inside `models/stable-diffusion`, instead of keeping them all in a single folder.
-- **Save metadata as JSON** - You can now save the metadata files as either text or json files (choose in the Settings tab).
+- **Find models in sub-folders** - This allows you to organize your models into sub-folders inside `models/stable-diffusion`, instead of keeping them all in a single folder. Thanks @patriceac and @ogmaresca.
+- **Custom Modifier Categories** - Ability to create custom modifiers with thumbnails, and custom categories (and hierarchy of categories). Details: https://github.com/easydiffusion/easydiffusion/wiki/Custom-Modifiers . Thanks @ogmaresca.
+- **Embed metadata, or save as TXT/JSON** - You can now embed the metadata directly into the images, or save them as text or json files (choose in the Settings tab). Thanks @patriceac.
 - **Major rewrite of the code** - Most of the codebase has been reorganized and rewritten, to make it more manageable and easier for new developers to contribute features. We've separated our core engine into a new project called `sdkit`, which allows anyone to easily integrate Stable Diffusion (and related modules like GFPGAN etc) into their programming projects (via a simple `pip install sdkit`): https://github.com/easydiffusion/sdkit/
 - **Name change** - Last, and probably the least, the UI is now called "Easy Diffusion". It indicates the focus of this project - an easy way for people to play with Stable Diffusion.
 
 Our focus continues to remain on an easy installation experience, and an easy user-interface. While still remaining pretty powerful, in terms of features and speed.
 
 ### Detailed changelog
+* 2.5.48 - 1 Aug 2023 - (beta-only) Full support for ControlNets. You can select a control image to guide the AI. You can pick a filter to pre-process the image, and one of the known (or custom) controlnet models. Supports `OpenPose`, `Canny`, `Straight Lines`, `Depth`, `Line Art`, `Scribble`, `Soft Edge`, `Shuffle` and `Segment`.
+* 2.5.47 - 30 Jul 2023 - An option to use `Strict Mask Border` while inpainting, to avoid touching areas outside the mask. But this might show a slight outline of the mask, which you will have to touch up separately.
+* 2.5.47 - 29 Jul 2023 - (beta-only) Fix long prompts with SDXL.
+* 2.5.47 - 29 Jul 2023 - (beta-only) Fix red dots in some SDXL images.
+* 2.5.47 - 29 Jul 2023 - Significantly faster `Fix Faces` and `Upscale` buttons (on the image). They no longer need to generate the image from scratch, instead they just upscale/fix the generated image in-place.
+* 2.5.47 - 28 Jul 2023 - Lots of internal code reorganization, in preparation for supporting Controlnets. No user-facing changes.
+* 2.5.46 - 27 Jul 2023 - (beta-only) Full support for SD-XL models (base and refiner)!
+* 2.5.45 - 24 Jul 2023 - (beta-only) Hide the samplers that won't be supported in the new diffusers version.
+* 2.5.45 - 22 Jul 2023 - (beta-only) Fix the recently-broken inpainting models.
+* 2.5.45 - 16 Jul 2023 - (beta-only) Fix the image quality of LoRAs, which had degraded in v2.5.44.
+* 2.5.44 - 15 Jul 2023 - (beta-only) Support for multiple LoRA files.
+* 2.5.43 - 9 Jul 2023 - (beta-only) Support for loading Textual Inversion embeddings. You can find the option in the Image Settings panel. Thanks @JeLuf.
+* 2.5.43 - 9 Jul 2023 - Improve the startup time of the UI.
+* 2.5.42 - 4 Jul 2023 - Keyboard shortcuts for the Image Editor. Thanks @JeLuf.
+* 2.5.42 - 28 Jun 2023 - Allow dropping images from folders to use as an Initial Image.
+* 2.5.42 - 26 Jun 2023 - Show a popup for Image Modifiers, allowing a larger screen space, better UX on mobile screens, and more room for us to develop and improve the Image Modifiers panel. Thanks @Hakorr.
+* 2.5.42 - 26 Jun 2023 - (beta-only) Show a welcome screen for users of the diffusers beta, with instructions on how to use the new prompt syntax, and known bugs. Thanks @JeLuf.
+* 2.5.42 - 26 Jun 2023 - Use YAML files for config. You can now edit the `config.yaml` file (using a text editor, like Notepad). This file is present inside the Easy Diffusion folder, and is easier to read and edit (for humans) than JSON. Thanks @JeLuf.
+* 2.5.41 - 24 Jun 2023 - (beta-only) Fix broken inpainting in low VRAM usage mode.
+* 2.5.41 - 24 Jun 2023 - (beta-only) Fix a recent regression where the LoRA would not get applied when changing SD models.
+* 2.5.41 - 23 Jun 2023 - Fix a regression where latent upscaler stopped working on PCs without a graphics card.
+* 2.5.41 - 20 Jun 2023 - Automatically fix black images if fp32 attention precision is required in diffusers.
+* 2.5.41 - 19 Jun 2023 - Another fix for multi-gpu rendering (in all VRAM usage modes).
+* 2.5.41 - 13 Jun 2023 - Fix multi-gpu bug with "low" VRAM usage mode while generating images.
+* 2.5.41 - 12 Jun 2023 - Fix multi-gpu bug with CodeFormer.
+* 2.5.41 - 6 Jun 2023 - Allow changing the strength of CodeFormer, and slightly improved styling of the CodeFormer options.
+* 2.5.41 - 5 Jun 2023 - Allow sharing an Easy Diffusion instance via https://try.cloudflare.com/ . You can find this option at the bottom of the Settings tab. Thanks @JeLuf.
+* 2.5.41 - 5 Jun 2023 - Show an option to download for tiled images. Shows a button on the generated image. Creates larger images by tiling them with the image generated by Easy Diffusion. Thanks @JeLuf.
+* 2.5.41 - 5 Jun 2023 - (beta-only) Allow LoRA strengths between -2 and 2. Thanks @ogmaresca.
+* 2.5.40 - 5 Jun 2023 - Reduce the VRAM usage of Latent Upscaling when using "balanced" VRAM usage mode.
+* 2.5.40 - 5 Jun 2023 - Fix the "realesrgan" key error when using CodeFormer with more than 1 image in a batch.
+* 2.5.40 - 3 Jun 2023 - Added CodeFormer as another option for fixing faces and eyes. CodeFormer tends to perform better than GFPGAN for many images. Thanks @patriceac for the implementation, and for contacting the CodeFormer team (who were supportive of it being integrated into Easy Diffusion).
+* 2.5.39 - 25 May 2023 - (beta-only) Seamless Tiling - make seamlessly tiled images, e.g. rock and grass textures. Thanks @JeLuf.
+* 2.5.38 - 24 May 2023 - Better reporting of errors, and show an explanation if the user cannot disable the "Use CPU" setting.
+* 2.5.38 - 23 May 2023 - Add Latent Upscaler as another option for upscaling images. Thanks @JeLuf for the implementation of the Latent Upscaler model.
+* 2.5.37 - 19 May 2023 - (beta-only) Two more samplers: DDPM and DEIS. Also disables the samplers that aren't working yet in the Diffusers version. Thanks @ogmaresca.
+* 2.5.37 - 19 May 2023 - (beta-only) Support CLIP-Skip. You can set this option under the models dropdown. Thanks @JeLuf.
+* 2.5.37 - 19 May 2023 - (beta-only) More VRAM optimizations for all modes in diffusers. The VRAM usage for diffusers in "low" and "balanced" should now be equal or less than the non-diffusers version. Performs softmax in half precision, like sdkit does.
+* 2.5.36 - 16 May 2023 - (beta-only) More VRAM optimizations for "balanced" VRAM usage mode.
+* 2.5.36 - 11 May 2023 - (beta-only) More VRAM optimizations for "low" VRAM usage mode.
+* 2.5.36 - 10 May 2023 - (beta-only) Bug fix for "meta" error when using a LoRA in 'low' VRAM usage mode.
+* 2.5.35 - 8 May 2023 - Allow dragging a zoomed-in image (after opening an image with the "expand" button). Thanks @ogmaresca.
+* 2.5.35 - 3 May 2023 - (beta-only) First round of VRAM Optimizations for the "Test Diffusers" version. This change significantly reduces the amount of VRAM used by the diffusers version during image generation. The VRAM usage is still not equal to the "non-diffusers" version, but more optimizations are coming soon.
+* 2.5.34 - 22 Apr 2023 - Don't start the browser in an incognito new profile (on Windows). Thanks @JeLuf.
+* 2.5.33 - 21 Apr 2023 - Install PyTorch 2.0 on new installations (on Windows and Linux).
+* 2.5.32 - 19 Apr 2023 - Automatically check for black images, and set full-precision if necessary (for attn). This means custom models based on Stable Diffusion v2.1 will just work, without needing special command-line arguments or editing of yaml config files.
+* 2.5.32 - 18 Apr 2023 - Automatic support for AMD graphics cards on Linux. Thanks @DianaNites and @JeLuf.
+* 2.5.31 - 10 Apr 2023 - Reduce VRAM usage while upscaling.
+* 2.5.31 - 6 Apr 2023 - Allow seeds upto `4,294,967,295`. Thanks @ogmaresca.
+* 2.5.31 - 6 Apr 2023 - Buttons to show the previous/next image in the image popup. Thanks @ogmaresca.
+* 2.5.30 - 5 Apr 2023 - Fix a bug where the JPEG image quality wasn't being respected when embedding the metadata into it. Thanks @JeLuf.
+* 2.5.30 - 1 Apr 2023 - (beta-only) Slider to control the strength of the LoRA model.
+* 2.5.30 - 28 Mar 2023 - Refactor task entry config to use a generating method. Added ability for plugins to easily add to this. Removed confusing sentence from `contributing.md`
+* 2.5.30 - 28 Mar 2023 - Allow the user to undo the deletion of tasks or images, instead of showing a pop-up each time. The new `Undo` button will be present at the top of the UI. Thanks @JeLuf.
+* 2.5.30 - 28 Mar 2023 - Support saving lossless WEBP images. Thanks @ogmaresca.
+* 2.5.30 - 28 Mar 2023 - Lots of bug fixes for the UI (Read LoRA flag in metadata files, new prompt weight format with scrollwheel, fix overflow with lots of tabs, clear button in image editor, shorter filenames in download). Thanks @patriceac, @JeLuf and @ogmaresca.
+* 2.5.29 - 27 Mar 2023 - (beta-only) Fix a bug where some non-square images would fail while inpainting with a `The size of tensor a must match size of tensor b` error.
+* 2.5.29 - 27 Mar 2023 - (beta-only) Fix the `incorrect number of channels` error, when given a PNG image with an alpha channel in `Test Diffusers`.
+* 2.5.29 - 27 Mar 2023 - (beta-only) Fix broken inpainting in `Test Diffusers`.
+* 2.5.28 - 24 Mar 2023 - (beta-only) Support for weighted prompts and long prompt lengths (not limited to 77 tokens). This change requires enabling the `Test Diffusers` setting in beta (in the Settings tab), and restarting the program.
+* 2.5.27 - 21 Mar 2023 - (beta-only) LoRA support, accessible by enabling the `Test Diffusers` setting (in the Settings tab in the UI). This change switches the internal engine to diffusers (if the `Test Diffusers` setting is enabled). If the `Test Diffusers` flag is disabled, it'll have no impact for the user.
+* 2.5.26 - 15 Mar 2023 - Allow styling the buttons displayed on an image. Update the API to allow multiple buttons and text labels in a single row. Thanks @ogmaresca.
+* 2.5.26 - 15 Mar 2023 - View images in full-screen, by either clicking on the image, or clicking the "Full screen" icon next to the Seed number on the image. Thanks @ogmaresca for the internal API.
+* 2.5.25 - 14 Mar 2023 - Button to download all the images, and all the metadata as a zip file. This is available at the top of the UI, as well as on each image. Thanks @JeLuf.
+* 2.5.25 - 14 Mar 2023 - Lots of UI tweaks and bug fixes. Thanks @patriceac and @JeLuf.
+* 2.5.24 - 11 Mar 2023 - Button to load an image mask from a file.
+* 2.5.24 - 10 Mar 2023 - Logo change. Image credit: @lazlo_vii.
+* 2.5.23 - 8 Mar 2023 - Experimental support for Mac M1/M2. Thanks @michaelgallacher, @JeLuf and vishae!
+* 2.5.23 - 8 Mar 2023 - Ability to create custom modifiers with thumbnails, and custom categories (and hierarchy of categories). More details - https://github.com/easydiffusion/easydiffusion/wiki/Custom-Modifiers . Thanks @ogmaresca.
 * 2.5.22 - 28 Feb 2023 - Minor styling changes to UI buttons, and the models dropdown.
 * 2.5.22 - 28 Feb 2023 - Lots of UI-related bug fixes. Thanks @patriceac.
 * 2.5.21 - 22 Feb 2023 - An option to control the size of the image thumbnails. You can use the `Display options` in the top-right corner to change this. Thanks @JeLuf.
@@ -43,7 +165,7 @@ Our focus continues to remain on an easy installation experience, and an easy us
 * 2.5.14 - 3 Feb 2023 - Fix the 'Make Similar Images' button, which was producing incorrect images (weren't very similar).
 * 2.5.13 - 1 Feb 2023 - Fix the remaining GPU memory leaks, including a better fix (more comprehensive) for the change in 2.5.12 (27 Jan).
 * 2.5.12 - 27 Jan 2023 - Fix a memory leak, which made the UI unresponsive after an out-of-memory error. The allocated memory is now freed-up after an error.
-* 2.5.11 - 25 Jan 2023 - UI for Merging Models. Thanks @JeLuf. More info: https://github.com/cmdr2/stable-diffusion-ui/wiki/Model-Merging
+* 2.5.11 - 25 Jan 2023 - UI for Merging Models. Thanks @JeLuf. More info: https://github.com/easydiffusion/easydiffusion/wiki/Model-Merging
 * 2.5.10 - 24 Jan 2023 - Reduce the VRAM usage for img2img in 'balanced' mode (without reducing the rendering speed), to make it similar to v2.4 of this UI.
 * 2.5.9 - 23 Jan 2023 - Fix a bug where img2img would produce poorer-quality images for the same settings, as compared to version 2.4 of this UI.
 * 2.5.9 - 23 Jan 2023 - Reduce the VRAM usage for 'balanced' mode (without reducing the rendering speed), to make it similar to v2.4 of the UI.
@@ -72,8 +194,8 @@ Our focus continues to remain on an easy installation experience, and an easy us
 - **Automatic scanning for malicious model files** - using `picklescan`, and support for `safetensor` model format. Thanks @JeLuf
 - **Image Editor** - for drawing simple images for guiding the AI. Thanks @mdiller
 - **Use pre-trained hypernetworks** - for improving the quality of images. Thanks @C0bra5
-- **Support for custom VAE models**. You can place your VAE files in the `models/vae` folder, and refresh the browser page to use them. More info: https://github.com/cmdr2/stable-diffusion-ui/wiki/VAE-Variational-Auto-Encoder
-- **Experimental support for multiple GPUs!** It should work automatically. Just open one browser tab per GPU, and spread your tasks across your GPUs. For e.g. open our UI in two browser tabs if you have two GPUs. You can customize which GPUs it should use in the "Settings" tab, otherwise let it automatically pick the best GPUs. Thanks @madrang . More info: https://github.com/cmdr2/stable-diffusion-ui/wiki/Run-on-Multiple-GPUs
+- **Support for custom VAE models**. You can place your VAE files in the `models/vae` folder, and refresh the browser page to use them. More info: https://github.com/easydiffusion/easydiffusion/wiki/VAE-Variational-Auto-Encoder
+- **Experimental support for multiple GPUs!** It should work automatically. Just open one browser tab per GPU, and spread your tasks across your GPUs. For e.g. open our UI in two browser tabs if you have two GPUs. You can customize which GPUs it should use in the "Settings" tab, otherwise let it automatically pick the best GPUs. Thanks @madrang . More info: https://github.com/easydiffusion/easydiffusion/wiki/Run-on-Multiple-GPUs
 - **Cleaner UI design** - Show settings and help in new tabs, instead of dropdown popups (which were buggy). Thanks @mdiller
 - **Progress bar.** Thanks @mdiller
 - **Custom Image Modifiers** - You can now save your custom image modifiers! Your saved modifiers can include special characters like `{}, (), [], |`
